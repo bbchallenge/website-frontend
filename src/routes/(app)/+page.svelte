@@ -5,9 +5,8 @@
 	import { API } from '$lib/api_server';
 	import { addToHistory, getHistory, numberWithCommas } from '$lib/utils';
 	import {
+		HeadStyle,
 		TMDecisionStatus,
-		tm_trace_to_image,
-		tm_explore,
 		tmToMachineCode,
 		machineCodeToTM,
 		DB_SIZE,
@@ -70,7 +69,7 @@
 	//console.log(machine);
 
 	let exploreMode = false;
-	let showHeadMove = true;
+	let headStyle = HeadStyle.MOVEMENT;
 
 	const nbIterDefault = 10000;
 	const tapeWidthDefault = 400;
@@ -446,7 +445,7 @@
 						{tapeWidth}
 						{nbIter}
 						{origin_x}
-						{showHeadMove}
+						headStyle={headStyle}
 						machineName={machineCode || machineID}
 					/>
 					<div class="text-xs pt-0 flex space-x-1 mt-2">
@@ -529,12 +528,14 @@
 									<input bind:value={initial_tape} class="text-black" />
 								</label>
 							</div>
-							{#if !exploreMode}
-								<label class="text-sm mt-2 flex items-center space-x-2 cursor-pointer">
-									<input type="checkbox" bind:checked={showHeadMove} />
-									<div>Show head movement (green for L, red for R)</div>
-								</label>
-							{/if}
+							<label class="text-sm mt-2 flex items-center space-x-2 cursor-pointer">
+								<div>Head Color:</div>
+								<select class="text-black" bind:value={headStyle}>
+									<option value={HeadStyle.NONE}>None</option>
+									<option value={HeadStyle.MOVEMENT}>Movement (green for L, red for R)</option>
+									<option value={HeadStyle.STATE}>State</option>
+								</select>
+							</label>
 						{/if}
 						<label class="text-sm mt-1 flex items-center space-x-2 cursor-pointer">
 							<input type="checkbox" bind:checked={exploreMode} />

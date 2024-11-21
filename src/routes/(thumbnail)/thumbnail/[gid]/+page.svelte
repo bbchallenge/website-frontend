@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 	import { API } from '$lib/api_server';
 	import { onMount } from 'svelte';
-	import { tm_trace_to_image, machineCodeToTM } from '$lib/tm';
+	import { HeadStyle, tm_trace_to_image, machineCodeToTM } from '$lib/tm';
 	import '$lib/styles/tailwind.css';
 
 	let generalisedIDAndParams = $page.params.gid;
@@ -37,8 +37,6 @@
 	}
 
 	let canvas;
-
-	let showHeadMove = true;
 
 	const drawRect = (context) => {
 		context.fillStyle = 'black';
@@ -92,7 +90,7 @@
 			nbIter,
 			origin_x,
 			true,
-			showHeadMove
+			HeadStyle.MOVEMENT
 		);
 	}
 

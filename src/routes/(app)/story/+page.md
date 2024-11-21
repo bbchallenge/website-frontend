@@ -140,11 +140,13 @@ Here is the space-time diagram of the first 10,000 iterations of the <a  href="h
 
 </div>
 
-Additional green and red colors are used to track the head position and its movement: green when the head has moved to the left and red when it has moved to the right.
+Additional colors are used to track the head position and its movement: green when the head has moved to the left and red when it has moved to the right.
 
 By default, these space-time diagrams are re-scaled to fit a 400x500 canvas, hence they can be inexact due to the scaling algorithm, especially at small scales (i.e. few simulation steps).
 
-If you tick **Explore mode** you will enter a more precise visualisation of space-time diagrams that are accurate at small scales and that will give you additional coloured information about the state of the machine at each step.
+You can tick **Simulation Parameters** to modify this head coloration and the size of the simulated space/time axes.
+
+You can tick **Explore mode** to enter a more precise visualisation of space-time diagrams that are accurate at small scales and that will give you additional coloured information about the state of the machine at each step.
 
 <a id="machine-id"></a>
 

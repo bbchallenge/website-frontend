@@ -1,6 +1,41 @@
 export type TM = { states: number, symbols: number, code: Uint8Array };
-
+export enum HeadStyle { NONE, MOVEMENT, STATE };
 export const DB_SIZE = 88664064;
+type RGBA = Array<number>;
+class Painter {
+	public* colorings(tape, curr_pos, curr_state): Generator<[number, RGBA]> {
+	}
+};
+class TapePainter {
+	constructor(public readonly symbols: number) {
+	}
+	public* colorings(tape, curr_pos, curr_state): Generator<[number, RGBA]> {
+		const color_scale = 255 / (this.symbols - 1);
+		for (let i = 0; i < tape.length; i += 1) {
+			const pos = naturalToInt(i);
+			if (tape[i] != undefined) {
+				const color = Math.floor(color_scale * tape[i]);
+				yield [pos, [color, color, color, 255]];
+			}
+		}
+	}
+};
+class HeadMovementPainter extends Painter {
+	last_pos: number = 0;
+	public* colorings(tape, curr_pos, curr_state): Generator<[number, RGBA]> {
+		yield [curr_pos, [curr_pos >= this.last_pos ? 255 : 0, curr_pos < this.last_pos ? 255 : 0, 0, 255]];
+		this.last_pos = curr_pos;
+	}
+};
+class HeadStatePainter extends Painter {
+	public* colorings(tape, curr_pos, curr_state): Generator<[number, RGBA]> {
+		if (curr_state !== null && curr_state < colorList.length) {
+			yield [curr_pos, colorList[curr_state]];
+		}
+	}
+};
+const HEAD_PAINTER = [Painter, HeadMovementPainter, HeadStatePainter];
+
 
 export function encodedTransitionToString(transition): string {
 	try {
@@ -127,13 +162,13 @@ export function APIDecisionStatusToTMDecisionStatus(status) {
 }
 
 const colorList = [
-	[255, 0, 0],
-	[255, 128, 0],
-	[0, 0, 255],
-	[0, 255, 0],
-	[255, 0, 255],
-	[0, 255, 255],
-	[255, 255, 0]
+	[255,   0,   0, 255],
+	[255, 128,   0, 255],
+	[  0,   0, 255, 255],
+	[  0, 255,   0, 255],
+	[255,   0, 255, 255],
+	[  0, 255, 255, 255],
+	[255, 255,   0, 255]
 ];
 
 function intToNatural(n: number) {
@@ -172,12 +207,11 @@ export function render_history(machine: TM, initial_tape = '0', height = 1000) {
 
 	let {tape, state: curr_state} = parse_initial_tape(machine, initial_tape);
 	let curr_pos = 0;
-	history.push({ tape, curr_state, curr_pos });
 
 	for (let row = 0; row < height; row += 1) {
+		history.push({ tape, curr_pos, curr_state });
 		tape = [...tape];
 		[curr_state, curr_pos] = step(machine, curr_state, curr_pos, tape);
-		history.push({ tape, curr_pos, curr_state });
 		if (curr_state === null || curr_state >= machine.states) {
 			break;
 		}
@@ -189,7 +223,8 @@ export function tm_explore(
 	ctx: CanvasRenderingContext2D,
 	machine: TM,
 	initial_tape = '0',
-	height = 1000
+	height = 1000,
+	headStyle: HeadStyle = HeadStyle.STATE
 ) {
 	const history = render_history(machine, initial_tape, height);
 
@@ -198,32 +233,25 @@ export function tm_explore(
 	let y_offset = 0;
 
 	const MAX_SCROLL_Y = 20;
+	const painters = [new TapePainter(machine.symbols), new HEAD_PAINTER[headStyle]()];
 
 	const render = () => {
 		const height = Math.ceil(ctx.canvas.height / zoom);
 		const width = Math.ceil(ctx.canvas.width / zoom);
 		const minx = Math.floor(-x_offset / zoom);
 		const miny = Math.floor(-y_offset / zoom);
-		const color_scale = 255 / (machine.symbols - 1);
 
 		for (let row = Math.max(miny, 0); row < Math.min(miny + height + 1, history.length); row++) {
+			if (row == 0) console.log("history[row] =", history[row]);
 			if (!history[row]) continue;
 			const { tape, curr_pos, curr_state } = history[row];
-
-			for (let i = 0; i < tape.length; i += 1) {
-				const col = naturalToInt(i);
-				if (col < minx || col > minx + width) continue;
-
-				if (tape[i]) {
-					const color = Math.floor(color_scale * tape[i]);
-					ctx.fillStyle = `rgb(${color}, ${color}, ${color})`;
+			for (let painter of painters) {
+				for (let [col, color] of painter.colorings(tape, curr_pos, curr_state)) {
+					if (row == 0) console.log("[col, color] =", [col, color]);
+					if (col < minx || col > minx + width) continue;
+					ctx.fillStyle = `rgb(${color.join(', ')})`;
 					ctx.fillRect(col, row, 1, 1);
 				}
-			}
-
-			if (curr_state !== null && curr_state < colorList.length) {
-				ctx.fillStyle = `rgb(${colorList[curr_state].join(', ')})`;
-				ctx.fillRect(curr_pos, row, 1, 1);
 			}
 		}
 	};
@@ -266,36 +294,23 @@ export function tm_trace_to_image(
 	height = 1000,
 	origin_x = 0.5,
 	fitCanvas = true,
-	showHeadMove = false
+	headStyle: HeadStyle = HeadStyle.NONE
 ) {
 	width = Math.max(1, Math.min(99_999, Math.floor(width) || 0));
 	height = Math.max(1, Math.min(99_999, Math.floor(height) || 0));
 
 	const imgData = ctx.createImageData(width, height);
-	const color_scale = 255 / (machine.symbols - 1);
 	const history = render_history(machine, initial_tape, height);
+	const painters = [new TapePainter(machine.symbols), new HEAD_PAINTER[headStyle]()];
 
-	for (let row = 1; row < history.length; row += 1) {
-		const last_pos = history[row - 1].curr_pos;
-		const { tape, curr_pos } = history[row];
-		for (let i = 0; i <= tape.length; i += 1) {
-			const pos = naturalToInt(i);
-			const col = pos + Math.floor(width * origin_x);
-			if (col < 0 || col >= width) continue;
-
-			if (pos == curr_pos && showHeadMove) {
+	for (let row = 0; row < history.length; row += 1) {
+		const { tape, curr_pos, curr_state } = history[row];
+		for (let painter of painters) {
+			for (let [pos, color] of painter.colorings(tape, curr_pos, curr_state)) {
+				const col = pos + Math.floor(width * origin_x);
+				if (col < 0 || col >= width) continue;
 				const imgIndex = 4 * (row * width + col);
-				imgData.data[imgIndex + 0] = curr_pos > last_pos ? 255 : 0;
-				imgData.data[imgIndex + 1] = curr_pos < last_pos ? 255 : 0;
-				imgData.data[imgIndex + 2] = 0;
-				imgData.data[imgIndex + 3] = 255;
-			} else if (tape[intToNatural(pos)] != undefined) {
-				const imgIndex = 4 * (row * width + col);
-				const color = Math.floor(color_scale * tape[intToNatural(pos)]);
-				imgData.data[imgIndex + 0] = color;
-				imgData.data[imgIndex + 1] = color;
-				imgData.data[imgIndex + 2] = color;
-				imgData.data[imgIndex + 3] = 255;
+				imgData.data.set(color, imgIndex);
 			}
 		}
 	}

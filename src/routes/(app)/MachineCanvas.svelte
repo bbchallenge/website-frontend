@@ -7,7 +7,7 @@
 	export let tapeWidth;
 	export let nbIter;
 	export let origin_x;
-	export let showHeadMove;
+	export let headStyle;
 
 	export let machineName;
 
@@ -35,7 +35,7 @@
 		const context = canvas.getContext('2d');
 		drawRect(context);
 		if (exploreMode) {
-			drawCleanup = tm_explore(context, machine, initial_tape, nbIter);
+			drawCleanup = tm_explore(context, machine, initial_tape, nbIter/*, headStyle*/);
 		} else {
 			tm_trace_to_image(
 				context,
@@ -45,7 +45,7 @@
 				nbIter,
 				origin_x,
 				true,
-				showHeadMove
+				headStyle
 			);
 		}
 	}
@@ -58,7 +58,7 @@
 		tapeWidth;
 		nbIter;
 		origin_x;
-		showHeadMove;
+		headStyle;
 
 		if (canvas) {
 			draw();
